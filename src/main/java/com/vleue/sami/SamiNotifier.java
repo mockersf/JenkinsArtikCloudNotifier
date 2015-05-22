@@ -41,7 +41,7 @@ public class SamiNotifier extends Notifier {
 
     // attributes --------------------------------------------------------------
 
-    /** base url of SAMI API server, e. g. <tt>https://api.samsunssami.io</tt>. */
+    /** base url of SAMI API server, e. g. <tt>https://api.samsunssami.io/v1.1</tt>. */
     private final String samiRootUrl;
 
     /** Device Token on SAMI. */
@@ -49,6 +49,9 @@ public class SamiNotifier extends Notifier {
 
     /** Device ID on SAMI */
     private final String deviceID;
+
+    private final String STATE_STARTING = "STARTING";
+    private final String STATE_UNKNOWN = "UNKNOWN";
 
     // public members ----------------------------------------------------------
 
@@ -77,13 +80,13 @@ public class SamiNotifier extends Notifier {
 
     @Override
     public boolean prebuild(AbstractBuild<?, ?> build, BuildListener listener) {
-        return processJenkinsEvent(build, listener, "IN_PROGRESS");
+        return processJenkinsEvent(build, listener, STATE_STARTING);
     }
 
     @Override
     public boolean perform(AbstractBuild<?, ?> build, Launcher launcher, BuildListener listener) {
         if (build.getResult() == null) {
-            return processJenkinsEvent(build, listener, "UNKNOWN");
+            return processJenkinsEvent(build, listener, STATE_UNKNOWN);
         } else {
             return processJenkinsEvent(build, listener, build.getResult().toString());
         }
@@ -373,6 +376,9 @@ public class SamiNotifier extends Notifier {
 
         JSONObject data = new JSONObject();
         data.put("state", state);
+        if (!state.equals(STATE_STARTING)) {
+            data.put("duration", System.currentTimeMillis() - build.getStartTimeInMillis());
+        }
         data.put("name", build.getProject().getName());
         data.put("number", build.getNumber());
 
