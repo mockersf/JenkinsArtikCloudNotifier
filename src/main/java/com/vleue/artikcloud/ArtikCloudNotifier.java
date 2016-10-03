@@ -1,4 +1,4 @@
-package com.vleue.sami;
+package com.vleue.artikcloud;
 
 import hudson.Extension;
 import hudson.Launcher;
@@ -37,17 +37,17 @@ import org.kohsuke.stapler.StaplerRequest;
 import org.kohsuke.stapler.QueryParameter;
 
 
-public class SamiNotifier extends Notifier {
+public class ArtikCloudNotifier extends Notifier {
 
     // attributes --------------------------------------------------------------
 
-    /** base url of SAMI API server, e. g. <tt>https://api.samsunssami.io/v1.1</tt>. */
-    private final String samiRootUrl;
+    /** base url of ARTIK Cloud API server, e. g. <tt>https://api.artik.cloud/v1.1</tt>. */
+    private final String artikRootUrl;
 
-    /** Device Token on SAMI. */
+    /** Device Token on ARTIK Cloud */
     private final String deviceToken;
 
-    /** Device ID on SAMI */
+    /** Device ID on ARTIK Cloud */
     private final String deviceID;
 
     private final String STATE_STARTING = "STARTING";
@@ -60,14 +60,14 @@ public class SamiNotifier extends Notifier {
     }
 
     @DataBoundConstructor
-    public SamiNotifier(String samiRootUrl, String deviceToken, String deviceID) {
-        this.samiRootUrl = samiRootUrl;
+    public ArtikCloudNotifier(String artikRootUrl, String deviceToken, String deviceID) {
+        this.artikRootUrl = artikRootUrl;
         this.deviceToken = deviceToken;
         this.deviceID = deviceID;
     }
 
-    public String getSamiRootUrl() {
-        return samiRootUrl;
+    public String getArtikRootUrl() {
+        return artikRootUrl;
     }
 
     public String getDeviceToken() {
@@ -94,9 +94,9 @@ public class SamiNotifier extends Notifier {
 
     /**
      * Processes the Jenkins events triggered before and after the build and
-     * initiates the Sami notification.
+     * initiates the Artik notification.
      *
-     * @param build		the build to notify Sami of
+     * @param build		the build to notify Artik of
      * @param listener	the Jenkins build listener
      * @param state		the state of the build (in progress, success, failed)
      * @return			always true in order not to abort the Job in case of
@@ -107,9 +107,9 @@ public class SamiNotifier extends Notifier {
         PrintStream logger = listener.getLogger();
 
         try {
-            notifySami(build, state, logger);
+            notifyArtik(build, state, logger);
         } catch (Exception e) {
-            logger.println("Caught exception while notifying SAMI");
+            logger.println("Caught exception while notifying ARTIK Cloud");
             e.printStackTrace(logger);
         }
         return true;
@@ -123,13 +123,13 @@ public class SamiNotifier extends Notifier {
      * @return			the HttpClient
      */
     private HttpClient getHttpClient() throws Exception {
-        String samiServer = this.samiRootUrl;
+        String artikServer = this.artikRootUrl;
         DescriptorImpl descriptor = getDescriptor();
-        if ("".equals(samiServer) || samiServer == null) {
-            samiServer = descriptor.getSamiRootUrl();
+        if ("".equals(artikServer) || artikServer == null) {
+            artikServer = descriptor.getArtikRootUrl();
         }
 
-        URL url = new URL(samiServer);
+        URL url = new URL(artikServer);
         HttpClientBuilder builder = HttpClientBuilder.create();
 
         // Configure the proxy, if needed
@@ -191,7 +191,7 @@ public class SamiNotifier extends Notifier {
 
         private String deviceToken;
         private String deviceID;
-        private String samiRootUrl;
+        private String artikRootUrl;
 
         public DescriptorImpl() {
             load();
@@ -213,15 +213,15 @@ public class SamiNotifier extends Notifier {
             }
         }
 
-        public String getSamiRootUrl() {
-            if ((samiRootUrl == null) || (samiRootUrl.trim().equals(""))) {
-                return "https://api.samsungsami.io/v1.1";
+        public String getArtikRootUrl() {
+            if ((artikRootUrl == null) || (artikRootUrl.trim().equals(""))) {
+                return "https://api.artik.cloud/v1.1";
             } else {
-                return samiRootUrl;
+                return artikRootUrl;
             }
         }
 
-        public FormValidation doCheckSamiServerBaseUrl(@QueryParameter String value)
+        public FormValidation doCheckArtikServerBaseUrl(@QueryParameter String value)
                 throws IOException, ServletException {
 
             // calculate effective url from global and local config
@@ -229,7 +229,7 @@ public class SamiNotifier extends Notifier {
             if ((url != null) && (!url.trim().equals(""))) {
                 url = url.trim();
             } else {
-                url = samiRootUrl != null ? samiRootUrl.trim() : null;
+                url = artikRootUrl != null ? artikRootUrl.trim() : null;
             }
 
             if ((url == null) || url.equals("")) {
@@ -280,7 +280,7 @@ public class SamiNotifier extends Notifier {
         }
 
         public String getDisplayName() {
-            return "Notify SAMI";
+            return "Notify ARTIK Cloud";
         }
 
         @Override
@@ -290,7 +290,7 @@ public class SamiNotifier extends Notifier {
             // set that to properties and call save().
             deviceToken = formData.getString("deviceToken");
             deviceID = formData.getString("deviceID");
-            samiRootUrl = formData.getString("samiRootUrl");
+            artikRootUrl = formData.getString("artikRootUrl");
             save();
             return super.configure(req,formData);
         }
@@ -299,29 +299,29 @@ public class SamiNotifier extends Notifier {
     // non-public members ------------------------------------------------------
 
     /**
-     * Notifies the configured SAMI server by POSTing the build results
-     * to the SAMI message API.
+     * Notifies the configured ARTIK Cloud server by POSTing the build results
+     * to the ARTIK Cloud message API.
      *
-     * @param build			the build to notify SAMI of
-     * @param state			the state of the build as defined by the SAMI API.
+     * @param build			the build to notify ARTIK Cloud of
+     * @param state			the state of the build as defined by the ARTIK Cloud API.
      * @param logger		the logger to use
      */
-    private void notifySami(
+    private void notifyArtik(
             final AbstractBuild<?, ?> build,
             final String state,
             final PrintStream logger
             ) throws Exception {
-        HttpEntity samiBuildNotificationEntity = newSamiBuildNotificationEntity(build, state);
-        HttpPost req = createRequest(samiBuildNotificationEntity);
+        HttpEntity artikBuildNotificationEntity = newArtikBuildNotificationEntity(build, state);
+        HttpPost req = createRequest(artikBuildNotificationEntity);
         HttpClient client = getHttpClient();
         try {
             HttpResponse res = client.execute(req);
             if (res.getStatusLine().getStatusCode() == 200) {
-                logger.println("Notified SAMI : " + state);
+                logger.println("Notified ARTIK Cloud : " + state);
             } else {
                 HttpEntity entity = res.getEntity();
                 String responseString = EntityUtils.toString(entity, "UTF-8");
-                logger.println("Failed to notify SAMI : " + responseString);
+                logger.println("Failed to notify ARTIK Cloud : " + responseString);
             }
         } finally {
             client.getConnectionManager().shutdown();
@@ -329,22 +329,22 @@ public class SamiNotifier extends Notifier {
     }
 
     /**
-     * Returns the HTTP POST request ready to be sent to the SAMI message API for
+     * Returns the HTTP POST request ready to be sent to the ARTIK Cloud message API for
      * the given build and change set.
      *
-     * @param samiBuildNotificationEntity	a entity containing the parameters
-     * 										for SAMI
-     * @return				the HTTP POST request to the SAMI build API
+     * @param artikBuildNotificationEntity	a entity containing the parameters
+     * 										for ARTIK Cloud 
+     * @return				the HTTP POST request to the ARTIK Cloud message API
      */
     private HttpPost createRequest(
-            final HttpEntity samiBuildNotificationEntity) {
+            final HttpEntity artikBuildNotificationEntity) {
 
-        String url = this.samiRootUrl;
+        String url = this.artikRootUrl;
         String deviceToken = this.deviceToken;
         DescriptorImpl descriptor = getDescriptor();
 
         if ("".equals(url) || url == null)
-            url = descriptor.getSamiRootUrl();
+            url = descriptor.getArtikRootUrl();
         if ("".equals(deviceToken) || deviceToken == null)
             deviceToken = descriptor.getDeviceToken();
 
@@ -352,20 +352,20 @@ public class SamiNotifier extends Notifier {
 
         req.addHeader("Content-Type", "application/json");
         req.addHeader("Authorization", "bearer " + deviceToken);
-        req.setEntity(samiBuildNotificationEntity);
+        req.setEntity(artikBuildNotificationEntity);
 
         return req;
     }
 
     /**
      * Returns the HTTP POST entity body with the JSON representation of the
-     * builds result to be sent to the SAMI build API.
+     * builds result to be sent to the ARTIK Cloud API.
      *
-     * @param build			the build to notify SAMI of
+     * @param build			the build to notify ARTIK Cloud of
      * @param state         the state of the build
-     * @return				HTTP entity body for POST to SAMI build API
+     * @return				HTTP entity body for POST to ARTIK Cloud message API
      */
-    private HttpEntity newSamiBuildNotificationEntity(
+    private HttpEntity newArtikBuildNotificationEntity(
             final AbstractBuild<?, ?> build,
             final String state) throws UnsupportedEncodingException {
         String deviceID = this.deviceID;

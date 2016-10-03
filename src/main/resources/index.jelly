@@ -1,4 +1,4 @@
 <?jelly escape-by-default='true'?>
 <div>
-  This plugin sends build results to Samsung SAMI.
+  This plugin sends build results to Artik Cloud.
 </div>
